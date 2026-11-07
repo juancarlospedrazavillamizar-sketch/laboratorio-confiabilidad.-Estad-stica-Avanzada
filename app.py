@@ -30,6 +30,12 @@ if "ver_demostracion" not in st.session_state:
 
 # Función auxiliar para renderizar archivos PDF locales en Streamlit con botón de descarga
 def mostrar_pdf(ruta_pdf):
+    if not os.path.exists(ruta_pdf):
+        if ruta_pdf.endswith("_pdf.pdf"):
+            alt_ruta = ruta_pdf.replace("_pdf.pdf", ".pdf")
+            if os.path.exists(alt_ruta):
+                ruta_pdf = alt_ruta
+
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
             pdf_bytes = f.read()
@@ -49,12 +55,11 @@ def mostrar_pdf(ruta_pdf):
         pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
     else:
-        st.error(f"⚠️ No se encontró el archivo `{ruta_pdf}` en el servidor.")
+        st.error(f"⚠️ No se encontró el archivo `{ruta_pdf}` en el servidor. Verifica que esté subido a GitHub.")
 
 # Estilo CSS inyectado: Borde verde al enfocar/escribir en las entradas
 st.markdown("""
 <style>
-    /* Borde verde al enfocar o escribir en cualquier entrada numérica */
     div[data-baseweb="input"]:focus-within {
         border-color: #10B981 !important;
         box-shadow: 0 0 0 1px #10B981 !important;
@@ -90,22 +95,21 @@ modulo = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
-# WIDGET MEDIANO EN LA BARRA LATERAL PARA LA GUÍA DE USUARIO
-st.sidebar.subheader("📖 Documentación")
+# WIDGET EXCLUSIVO DE GUÍA DE USUARIO EN LA BARRA LATERAL
 nombre_pdf_guia = "Guía de Usuario - Laboratorio Virtual de Confiabilidad.pdf"
 
 if os.path.exists(nombre_pdf_guia):
     with open(nombre_pdf_guia, "rb") as f:
         pdf_guia_bytes = f.read()
     st.sidebar.download_button(
-        label="📥 Descargar Guía de Usuario",
+        label="📖 Guía de Usuario",
         data=pdf_guia_bytes,
         file_name=nombre_pdf_guia,
         mime="application/pdf",
-        help="Haz clic para descargar el instructivo oficial en PDF."
+        help="Haz clic para descargar la guía de usuario oficial en PDF."
     )
 else:
-    st.sidebar.warning("⚠️ Archivo de guía no encontrado en el servidor.")
+    st.sidebar.warning("⚠️ Guía PDF no encontrada en el servidor.")
 
 st.sidebar.markdown("---")
 st.sidebar.caption("""
@@ -117,6 +121,7 @@ st.sidebar.caption("""
 5. Beta
 6. Weibull
 """)
+
 # ==============================================================================
 # MÓDULO 1: EXPLORADOR DE DISTRIBUCIONES (PDF Y CDF)
 # ==============================================================================
@@ -137,8 +142,8 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         if dist_choice == "Gamma":
             st.latex(r"f(x) = \frac{1}{\beta^\alpha \Gamma(\alpha)} x^{\alpha-1} e^{-x/\beta}")
-            alpha = st.number_input("Forma α (parámetro a):", min_value=1e-9, max_value=None, value=2.5, step=0.5, format="%g", help="📌 Significado: Número de etapas o fases independientes requeridas para el evento.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_gam_a")
-            beta = st.number_input("Escala β (parámetro b):", min_value=1e-9, max_value=None, value=2.0, step=0.2, format="%g", help="📌 Significado: Tiempo medio de duración asignado a cada etapa individual.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_gam_b")
+            alpha = st.number_input("Forma α (parámetro a):", min_value=1e-9, max_value=None, value=2.5, step=0.5, format="%g", key="m1_gam_a")
+            beta = st.number_input("Escala β (parámetro b):", min_value=1e-9, max_value=None, value=2.0, step=0.2, format="%g", key="m1_gam_b")
             
             x_max = float(stats.gamma.ppf(0.999, a=alpha, scale=beta))
             x = np.linspace(0.001, x_max, 500)
@@ -151,10 +156,10 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
             st.latex(r"f(x) = \lambda e^{-\lambda x} = \frac{1}{\beta}e^{-x/\beta}")
             param_tipo = st.radio("Entrada:", ["Tasa de falla λ", "Escala β (Media)"], key="m1_exp_tipo")
             if param_tipo == "Tasa de falla λ":
-                lam = st.number_input("Tasa λ:", min_value=1e-9, max_value=None, value=0.5, step=0.01, format="%g", help="📌 Significado: Frecuencia promedio con la que ocurren las fallas por unidad de tiempo.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_lam")
+                lam = st.number_input("Tasa λ:", min_value=1e-9, max_value=None, value=0.5, step=0.01, format="%g", key="m1_lam")
                 scale = 1.0 / lam
             else:
-                scale = st.number_input("Media β:", min_value=1e-9, max_value=None, value=2.0, step=0.1, format="%g", help="📌 Significado: Tiempo medio esperado de ocurrencia de un evento (MTTF).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_scale")
+                scale = st.number_input("Media β:", min_value=1e-9, max_value=None, value=2.0, step=0.1, format="%g", key="m1_scale")
                 lam = 1.0 / scale
             
             x_max = float(stats.expon.ppf(0.999, scale=scale))
@@ -166,7 +171,7 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         elif dist_choice == "Chi-cuadrada":
             st.latex(r"\chi^2(\nu), \quad E[X] = \nu, \quad V(X) = 2\nu")
-            df = st.number_input("Grados de libertad ν = n-1:", min_value=1, max_value=None, value=12, step=1, help="📌 Significado: Cantidad de variables normales independientes sumadas al cuadrado.\n\n🔢 Dominio válido: Debe ser un número entero mayor o igual a 1.", key="m1_chi_df")
+            df = st.number_input("Grados de libertad ν = n-1:", min_value=1, max_value=None, value=12, step=1, key="m1_chi_df")
             
             x_max = float(stats.chi2.ppf(0.999, df=df))
             x = np.linspace(0.001, x_max, 500)
@@ -177,8 +182,8 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         elif dist_choice == "Lognormal":
             st.latex(r"\ln(X) \sim \mathcal{N}(\mu, \sigma^2)")
-            mu_ln = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=1.2, step=0.1, format="%g", help="📌 Significado: Promedio de los datos transformados mediante el logaritmo natural ln(X).\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m1_ln_mu")
-            sigma_ln = st.number_input("Desv. estándar logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Dispersión o variabilidad de los datos en la escala logarítmica.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_ln_sig")
+            mu_ln = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=1.2, step=0.1, format="%g", key="m1_ln_mu")
+            sigma_ln = st.number_input("Desv. estándar logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", key="m1_ln_sig")
             
             x_max = float(stats.lognorm.ppf(0.995, s=sigma_ln, scale=np.exp(mu_ln)))
             x = np.linspace(0.001, x_max, 500)
@@ -189,8 +194,8 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         elif dist_choice == "Beta":
             st.latex(r"f(x) = \frac{1}{B(\alpha, \beta)} x^{\alpha-1} (1-x)^{\beta-1}")
-            alpha_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Primer parámetro de forma que controla la densidad cerca del extremo 0.\n\n🔢 Dominio válido: Debe ser strictly mayor que 0.", key="m1_beta_a")
-            beta_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=5.0, step=0.5, format="%g", help="📌 Significado: Segundo parámetro de forma que controla la densidad cerca del extremo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_beta_b")
+            alpha_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", key="m1_beta_a")
+            beta_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=5.0, step=0.5, format="%g", key="m1_beta_b")
             
             x = np.linspace(0.001, 0.999, 500)
             pdf = stats.beta.pdf(x, a=alpha_b, b=beta_b)
@@ -200,8 +205,8 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         elif dist_choice == "Weibull":
             st.latex(r"f(x) = \frac{\alpha}{\beta} \left(\frac{x}{\beta}\right)^{\alpha-1} e^{-(x/\beta)^\alpha}")
-            forma_w = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", help="📌 Significado: Gobierna la tendencia del riesgo (α<1 falla temprana, α=1 aleatoria, α>1 desgaste).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_w_forma")
-            escala_w = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=6.0, step=0.5, format="%g", help="📌 Significado: Vida característica en la que falla aproximadamente el 63.2% de la población.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_w_escala")
+            forma_w = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", key="m1_w_forma")
+            escala_w = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=6.0, step=0.5, format="%g", key="m1_w_escala")
             
             x_max = float(stats.weibull_min.ppf(0.999, c=forma_w, scale=escala_w))
             x = np.linspace(0.001, x_max, 500)
@@ -263,33 +268,33 @@ elif modulo == "2. Confiabilidad y Supervivencia (R(t) y Tasa de Falla)":
             key="m2_dist_rel"
         )
 
-        t_mision = st.number_input("Tiempo de misión t (horas):", min_value=1e-9, max_value=None, value=1200.0, step=100.0, format="%g", help="📌 Significado: Duración de trabajo exigida sobre la cual se evalúa la probabilidad de supervivencia.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_t_mision")
+        t_mision = st.number_input("Tiempo de misión t (horas):", min_value=1e-9, max_value=None, value=1200.0, step=100.0, format="%g", key="m2_t_mision")
 
         if "Gamma" in dist_rel:
-            alpha_g = st.number_input("Etapas de degradación α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", help="📌 Significado: Cantidad de etapas parciales de deterioro requeridas para el fallo total.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_ag")
-            beta_g = st.number_input("Escala de etapa β (horas):", min_value=1e-9, max_value=None, value=1000.0, step=50.0, format="%g", help="📌 Significado: Tiempo medio característico transcurrido en cada etapa de degradación.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_bg")
+            alpha_g = st.number_input("Etapas de degradación α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", key="m2_ag")
+            beta_g = st.number_input("Escala de etapa β (horas):", min_value=1e-9, max_value=None, value=1000.0, step=50.0, format="%g", key="m2_bg")
             dist_obj = stats.gamma(a=alpha_g, scale=beta_g)
 
         elif "Exponencial" in dist_rel:
-            mttf = st.number_input("Tiempo Medio de Falla MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=200.0, format="%g", help="📌 Significado: Promedio esperado de horas de funcionamiento continuo antes de una avería.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_mttf")
+            mttf = st.number_input("Tiempo Medio de Falla MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=200.0, format="%g", key="m2_mttf")
             dist_obj = stats.expon(scale=mttf)
 
         elif "Lognormal" in dist_rel:
-            mu_l = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", help="📌 Significado: Media del tiempo de vida expresada en escala logarítmica ln(T).\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m2_mul")
-            sigma_l = st.number_input("Dispersión logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Nivel de dispersión de fallas debidas a fatiga o estrés operativo.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_sigl")
+            mu_l = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", key="m2_mul")
+            sigma_l = st.number_input("Dispersión logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", key="m2_sigl")
             dist_obj = stats.lognorm(s=sigma_l, scale=np.exp(mu_l))
 
         elif "Weibull" in dist_rel:
-            beta_w = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", help="📌 Significado: Comportamiento y evolución del riesgo de falla acumulado en el tiempo.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_bw")
-            eta_w = st.number_input("Vida característica β (horas):", min_value=1e-9, max_value=None, value=3500.0, step=200.0, format="%g", help="📌 Significado: Escala temporal representativa de la vida esperada del equipo o componente.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m2_ew")
+            beta_w = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", key="m2_bw")
+            eta_w = st.number_input("Vida característica β (horas):", min_value=1e-9, max_value=None, value=3500.0, step=200.0, format="%g", key="m2_ew")
             dist_obj = stats.weibull_min(c=beta_w, scale=eta_w)
             
             if beta_w < 1.0:
-                st.info("⚠️ Forma α < 1: Tasa de falla decreciente (Mortalidad infantil / defectos de fábrica).")
+                st.info("⚠️ Forma α < 1: Tasa de falla decreciente (Mortalidad infantil).")
             elif np.isclose(beta_w, 1.0, atol=0.08):
-                st.info("ℹ️ Forma α = 1: Tasa de falla constante (Fallas aleatorias / sin memoria).")
+                st.info("ℹ️ Forma α = 1: Tasa de falla constante (Fallas aleatorias).")
             else:
-                st.info("⚙️ Forma α > 1: Tasa de falla creciente (Desgaste físico, fatiga y envejecimiento).")
+                st.info("⚙️ Forma α > 1: Tasa de falla creciente (Desgaste y envejecimiento).")
 
         r_mision = float(1.0 - dist_obj.cdf(t_mision))
         f_mision = float(dist_obj.cdf(t_mision))
@@ -355,9 +360,9 @@ elif modulo == "3. Análisis de Riesgo y Variabilidad (Beta y Chi²)":
 
         cc1, cc2 = st.columns([1, 1.5])
         with cc1:
-            n_muestras = st.number_input("Tamaño de muestra n:", min_value=2, max_value=None, value=31, step=1, help="📌 Significado: Número total de observaciones tomadas de la línea de producción.\n\n🔢 Dominio válido: Debe ser un entero mayor o igual a 2.", key="m3_n")
-            sigma_objetivo = st.number_input("Desviación estándar nominal σ:", min_value=1e-9, max_value=None, value=7.0, step=0.5, format="%g", help="📌 Significado: Dispersión estándar exigida por las especificaciones de calidad.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m3_sigobj")
-            s_muestral = st.number_input("Desviación estándar observada S:", min_value=1e-9, max_value=None, value=9.0, step=0.5, format="%g", help="📌 Significado: Dispersión empírica calculada sobre los datos muestreados.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m3_smuest")
+            n_muestras = st.number_input("Tamaño de muestra n:", min_value=2, max_value=None, value=31, step=1, key="m3_n")
+            sigma_objetivo = st.number_input("Desviación estándar nominal σ:", min_value=1e-9, max_value=None, value=7.0, step=0.5, format="%g", key="m3_sigobj")
+            s_muestral = st.number_input("Desviación estándar observada S:", min_value=1e-9, max_value=None, value=9.0, step=0.5, format="%g", key="m3_smuest")
 
             nu_df = n_muestras - 1
             chi_calculado = (nu_df * (s_muestral**2)) / (sigma_objetivo**2)
@@ -370,7 +375,7 @@ elif modulo == "3. Análisis de Riesgo y Variabilidad (Beta y Chi²)":
                 st.markdown(f"- **Probabilidad P(χ² > χ² calc):** `{p_valor_cola:g}` ({p_valor_cola*100:g}%)")
 
             if p_valor_cola < 0.05:
-                st.error("🚨 Variabilidad Crítica: Se rechaza que la dispersión cumpla con el estándar nominal (p < 0.05). Ajustar maquinaria.")
+                st.error("🚨 Variabilidad Crítica: Se rechaza que la dispersión cumpla con el estándar nominal (p < 0.05).")
             else:
                 st.success("✅ Proceso Estable: La variabilidad muestral es consistente con la tolerancia (p ≥ 0.05).")
 
@@ -403,9 +408,9 @@ elif modulo == "3. Análisis de Riesgo y Variabilidad (Beta y Chi²)":
 
         cb1, cb2 = st.columns([1, 1.5])
         with cb1:
-            a_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=4.0, step=0.5, format="%g", help="📌 Significado: Recuento de defectos u observaciones no conformes previas + 1.\n\n🔢 Dominio válido: Debe ser strictly mayor que 0.", key="m3_ba")
-            b_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Recuento de unidades totalmente aceptadas o conformes previas + 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m3_bb")
-            umbral_riesgo = st.number_input("Umbral de riesgo (xlim):", min_value=1e-7, max_value=1.0 - 1e-7, value=0.90, step=0.01, format="%g", help="📌 Significado: Proporción máxima aceptable de piezas no conformes en el lote.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 1.", key="m3_umb")
+            a_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=4.0, step=0.5, format="%g", key="m3_ba")
+            b_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", key="m3_bb")
+            umbral_riesgo = st.number_input("Umbral de riesgo (xlim):", min_value=1e-7, max_value=1.0 - 1e-7, value=0.90, step=0.01, format="%g", key="m3_umb")
 
             prob_exceso = 1.0 - stats.beta.cdf(umbral_riesgo, a=a_b, b=b_b)
             e_beta = a_b / (a_b + b_b)
@@ -458,41 +463,41 @@ elif modulo == "4. Comparador de Modelos de Vida Útil":
         st.subheader("Modelo 1")
         m1_tipo = st.selectbox("Seleccione modelo 1:", opciones_m4, key="m4_m1_tipo")
         if m1_tipo == "Gamma":
-            g_a1 = st.number_input("Forma α1:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", help="📌 Significado: Número de etapas del Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_ga1")
-            g_b1 = st.number_input("Escala β1 (horas):", min_value=1e-9, max_value=None, value=1000.0, step=100.0, format="%g", help="📌 Significado: Escala temporal por etapa para el Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_gb1")
+            g_a1 = st.number_input("Forma α1:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", key="m4_ga1")
+            g_b1 = st.number_input("Escala β1 (horas):", min_value=1e-9, max_value=None, value=1000.0, step=100.0, format="%g", key="m4_gb1")
             dist1 = stats.gamma(a=g_a1, scale=g_b1)
         elif m1_tipo == "Exponencial":
-            exp_sc1 = st.number_input("MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", help="📌 Significado: Tiempo medio antes de fallar para el Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_esc1")
+            exp_sc1 = st.number_input("MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", key="m4_esc1")
             dist1 = stats.expon(scale=exp_sc1)
         elif m1_tipo == "Lognormal":
-            ln_u1 = st.number_input("μ1 (log):", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", help="📌 Significado: Media logarítmica de la Lognormal del Modelo 1.\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m4_lnu1")
-            ln_s1 = st.number_input("σ1 (log):", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Desviación estándar logarítmica del Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_lns1")
+            ln_u1 = st.number_input("μ1 (log):", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", key="m4_lnu1")
+            ln_s1 = st.number_input("σ1 (log):", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", key="m4_lns1")
             dist1 = stats.lognorm(s=ln_s1, scale=np.exp(ln_u1))
         else:
-            w_c1 = st.number_input("Forma α1:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", help="📌 Significado: Parámetro de forma del Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_wc1")
-            w_sc1 = st.number_input("Escala β1 (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", help="📌 Significado: Escala de vida característica del Modelo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_wsc1")
+            w_c1 = st.number_input("Forma α1:", min_value=1e-9, max_value=None, value=2.5, step=0.1, format="%g", key="m4_wc1")
+            w_sc1 = st.number_input("Escala β1 (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", key="m4_wsc1")
             dist1 = stats.weibull_min(c=w_c1, scale=w_sc1)
 
     with cm2:
         st.subheader("Modelo 2")
         m2_tipo = st.selectbox("Seleccione modelo 2:", opciones_m4, index=1, key="m4_m2_tipo")
         if m2_tipo == "Gamma":
-            g_a2 = st.number_input("Forma α2:", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Número de etapas del Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_ga2")
-            g_b2 = st.number_input("Escala β2 (horas):", min_value=1e-9, max_value=None, value=1500.0, step=100.0, format="%g", help="📌 Significado: Escala temporal por etapa para el Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_gb2")
+            g_a2 = st.number_input("Forma α2:", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", key="m4_ga2")
+            g_b2 = st.number_input("Escala β2 (horas):", min_value=1e-9, max_value=None, value=1500.0, step=100.0, format="%g", key="m4_gb2")
             dist2 = stats.gamma(a=g_a2, scale=g_b2)
         elif m2_tipo == "Exponencial":
-            exp_sc2 = st.number_input("MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", help="📌 Significado: Tiempo medio antes de fallar para el Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_esc2")
+            exp_sc2 = st.number_input("MTTF (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", key="m4_esc2")
             dist2 = stats.expon(scale=exp_sc2)
         elif m2_tipo == "Lognormal":
-            ln_u2 = st.number_input("μ2 (log):", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", help="📌 Significado: Media logarítmica de la Lognormal del Modelo 2.\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m4_lnu2")
-            ln_s2 = st.number_input("σ2 (log):", min_value=1e-9, max_value=None, value=0.8, step=0.05, format="%g", help="📌 Significado: Desviación estándar logarítmica del Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_lns2")
+            ln_u2 = st.number_input("μ2 (log):", min_value=None, max_value=None, value=7.8, step=0.1, format="%g", key="m4_lnu2")
+            ln_s2 = st.number_input("σ2 (log):", min_value=1e-9, max_value=None, value=0.8, step=0.05, format="%g", key="m4_lns2")
             dist2 = stats.lognorm(s=ln_s2, scale=np.exp(ln_u2))
         else:
-            w_c2 = st.number_input("Forma α2:", min_value=1e-9, max_value=None, value=1.2, step=0.1, format="%g", help="📌 Significado: Parámetro de forma del Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_wc2")
-            w_sc2 = st.number_input("Escala β2 (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", help="📌 Significado: Escala de vida característica del Modelo 2.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_wsc2")
+            w_c2 = st.number_input("Forma α2:", min_value=1e-9, max_value=None, value=1.2, step=0.1, format="%g", key="m4_wc2")
+            w_sc2 = st.number_input("Escala β2 (horas):", min_value=1e-9, max_value=None, value=3000.0, step=100.0, format="%g", key="m4_wsc2")
             dist2 = stats.weibull_min(c=w_c2, scale=w_sc2)
 
-    t_obj = st.number_input("Tiempo objetivo t (horas):", min_value=1e-9, max_value=None, value=2000.0, step=50.0, format="%g", help="📌 Significado: Punto de corte en horas para contrastar la confiabilidad R(t).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m4_t_obj")
+    t_obj = st.number_input("Tiempo objetivo t (horas):", min_value=1e-9, max_value=None, value=2000.0, step=50.0, format="%g", key="m4_t_obj")
 
     with st.container():
         t_fin = max(dist1.ppf(0.99), dist2.ppf(0.99))
@@ -570,14 +575,14 @@ elif modulo == "5. Casos Prácticos y Toma de Decisiones":
     if "Caso 1" in caso_sel:
         st.subheader("Caso 1: Reemplazo Preventivo de Turbinas Térmicas")
         st.write("""
-        **Contexto:** Los componentes sufren fatiga por ciclos térmicos. El tiempo de falla sigue una distribución **Weibull** con β = 8,000 h y α = 2.8 (desgaste acelerado).
+        **Contexto:** Los componentes sufren fatiga por ciclos térmicos. El tiempo de falla sigue una distribución **Weibull** con β = 8,000 h y α = 2.8.
         
         **Criterio de Decisión:** La norma técnica exige ejecutar el reemplazo antes de que el riesgo de falla acumulada supere la tolerancia establecida (F(t) ≤ Tolerancia).
         """)
 
-        eta_t = st.number_input("Vida característica β (horas):", min_value=1e-9, max_value=None, value=8000.0, step=500.0, format="%g", help="📌 Significado: Vida nominal proyectada para los álabes de la turbina.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c1_eta")
-        beta_t = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.8, step=0.1, format="%g", help="📌 Significado: Grado de desgaste o fatiga térmica acumulada.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c1_beta")
-        tol_val = st.number_input("Tolerancia máxima de falla (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=5.0, step=0.5, format="%g", help="📌 Significado: Porcentaje máximo aceptable de componentes fallados antes de parar.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 100%.", key="c1_tol")
+        eta_t = st.number_input("Vida característica β (horas):", min_value=1e-9, max_value=None, value=8000.0, step=500.0, format="%g", key="c1_eta")
+        beta_t = st.number_input("Parámetro de forma α:", min_value=1e-9, max_value=None, value=2.8, step=0.1, format="%g", key="c1_beta")
+        tol_val = st.number_input("Tolerancia máxima de falla (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=5.0, step=0.5, format="%g", key="c1_tol")
         tol_max = tol_val / 100.0
 
         w_dist = stats.weibull_min(c=beta_t, scale=eta_t)
@@ -587,21 +592,19 @@ elif modulo == "5. Casos Prácticos y Toma de Decisiones":
         with st.container(border=True):
             st.markdown("**📋 Recomendación Automática del Sistema:**")
             st.markdown(f"- **Tiempo Límite Seguro de Operación:** `{t_optimo:g} horas`")
-            st.markdown(f"- **Vida Media MTTF (sin mantenimiento preventivo):** `{mttf_t:g} horas`")
-            st.markdown(f"- **Decisión:** Programar la parada de mantenimiento cada `{t_optimo:g} horas` para garantizar que no más del `{tol_max*100:g}%` de las unidades fallen en servicio imprevistamente.")
+            st.markdown(f"- **Vida Media MTTF:** `{mttf_t:g} horas`")
+            st.markdown(f"- **Decisión:** Programar la parada de mantenimiento cada `{t_optimo:g} horas`.")
 
     elif "Caso 2" in caso_sel:
         st.subheader("Caso 2: Control de Calidad y Rechazo de Lotes de Microchips")
         st.write("""
         **Contexto:** La proporción de unidades defectuosas de un lote sigue una distribución **Beta** (α, β) calibrada con inspecciones previas.
-        
-        **Criterio de Decisión:** Se rechaza el lote si la probabilidad de que la proporción de defectos supere el valor crítico es mayor al umbral de tolerancia.
         """)
 
-        a_lot = st.number_input("Parámetro α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", help="📌 Significado: Cantidad de microchips defectuosos observados en muestreo previo + 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c2_alot")
-        b_lot = st.number_input("Parámetro β:", min_value=1e-9, max_value=None, value=50.0, step=5.0, format="%g", help="📌 Significado: Cantidad de microchips operativos observados en muestreo previo + 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c2_blot")
-        prop_critica_val = st.number_input("Proporción crítica (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=8.0, step=0.5, format="%g", help="📌 Significado: Porcentaje máximo de defectos tolerado en el lote.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 100%.", key="c2_propcrit")
-        tol_riesgo_val = st.number_input("Umbral máximo de riesgo (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=10.0, step=0.5, format="%g", help="📌 Significado: Riesgo máximo aceptable de liberar un lote defectuoso al cliente.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 100%.", key="c2_tolriesgo")
+        a_lot = st.number_input("Parámetro α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", key="c2_alot")
+        b_lot = st.number_input("Parámetro β:", min_value=1e-9, max_value=None, value=50.0, step=5.0, format="%g", key="c2_blot")
+        prop_critica_val = st.number_input("Proporción crítica (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=8.0, step=0.5, format="%g", key="c2_propcrit")
+        tol_riesgo_val = st.number_input("Umbral máximo de riesgo (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=10.0, step=0.5, format="%g", key="c2_tolriesgo")
 
         prop_critica = prop_critica_val / 100.0
         tol_riesgo = tol_riesgo_val / 100.0
@@ -613,22 +616,20 @@ elif modulo == "5. Casos Prácticos y Toma de Decisiones":
         st.markdown(f"- **Probabilidad calculada P(X > {prop_critica:g}):** `{p_excede*100:g}%`")
 
         if p_excede > tol_riesgo:
-            st.error(f"🚨 DECISIÓN: RECHAZAR EL LOTE. La probabilidad de exceder el {prop_critica_val:g}% de defectos es {p_excede*100:g}%, lo que supera el umbral de tolerancia ({tol_riesgo_val:g}%).")
+            st.error(f"🚨 DECISIÓN: RECHAZAR EL LOTE. La probabilidad de exceder el {prop_critica_val:g}% de defectos es {p_excede*100:g}%.")
         else:
-            st.success(f"✅ DECISIÓN: ACEPTAR EL LOTE. La probabilidad de exceder el {prop_critica_val:g}% de defectos es {p_excede*100:g}%, cumpliendo las especificaciones de calidad.")
+            st.success(f"✅ DECISIÓN: ACEPTAR EL LOTE. Cumple las especificaciones de calidad.")
 
     elif "Caso 3" in caso_sel:
         st.subheader("Caso 3: Monitoreo Ambiental de Emisiones de Solventes")
         st.write("""
-        **Contexto:** La concentración de contaminantes químicos (ppm) sigue una distribución **Lognormal** con parámetros μ y σ.
-        
-        **Criterio de Decisión:** La autoridad ambiental exige activar filtros de emergencia si la probabilidad de exceder la concentración límite supera el umbral de tiempo permitido.
+        **Contexto:** La concentración de contaminantes químicos (ppm) sigue una distribución **Lognormal**.
         """)
 
-        mu_amb = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=3.2, step=0.1, format="%g", help="📌 Significado: Promedio continuo de concentración en escala logarítmica.\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="c3_muamb")
-        sig_amb = st.number_input("Desviación logarítmica σ:", min_value=1e-9, max_value=None, value=1.0, step=0.05, format="%g", help="📌 Significado: Variabilidad o dispersión de picos de emisión.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c3_sigamb")
-        lim_ppm = st.number_input("Límite normativo (ppm):", min_value=1e-9, max_value=None, value=8.0, step=1.0, format="%g", help="📌 Significado: Concentración máxima de químico tolerada en partes por millón.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="c3_limppm")
-        tol_tiempo_pct = st.number_input("Porcentaje de tiempo límite (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=20.0, step=1.0, format="%g", help="📌 Significado: Porcentaje de tiempo máximo tolerable en exceso de contaminantes.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 100%.", key="c3_toltiempo")
+        mu_amb = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=3.2, step=0.1, format="%g", key="c3_muamb")
+        sig_amb = st.number_input("Desviación logarítmica σ:", min_value=1e-9, max_value=None, value=1.0, step=0.05, format="%g", key="c3_sigamb")
+        lim_ppm = st.number_input("Límite normativo (ppm):", min_value=1e-9, max_value=None, value=8.0, step=1.0, format="%g", key="c3_limppm")
+        tol_tiempo_pct = st.number_input("Porcentaje de tiempo límite (%):", min_value=1e-7, max_value=100.0 - 1e-7, value=20.0, step=1.0, format="%g", key="c3_toltiempo")
 
         tol_tiempo_ratio = tol_tiempo_pct / 100.0
         z_score = (np.log(lim_ppm) - mu_amb) / sig_amb
@@ -638,9 +639,9 @@ elif modulo == "5. Casos Prácticos y Toma de Decisiones":
         st.markdown(f"- **Probabilidad calculada P(X > {lim_ppm:g} ppm):** `{p_exceso_amb*100:g}%`")
 
         if p_exceso_amb > tol_tiempo_ratio:
-            st.error(f"🚨 ACCIÓN OBLIGATORIA: ACTIVAR FILTROS DE EMERGENCIA. La probabilidad de emisión excesiva ({p_exceso_amb*100:g}%) supera el {tol_tiempo_pct:g}% normativo.")
+            st.error(f"🚨 ACCIÓN OBLIGATORIA: ACTIVAR FILTROS DE EMERGENCIA.")
         else:
-            st.success(f"✅ OPERACIÓN NORMAL: La concentración se mantiene dentro de los límites ambientales admisibles.")
+            st.success(f"✅ OPERACIÓN NORMAL: Concentración dentro de límites admisibles.")
 
 # ==============================================================================
 # MÓDULO 6: EJERCICIOS PRÁCTICOS Y CÁLCULO DE PROBABILIDADES
@@ -648,7 +649,7 @@ elif modulo == "5. Casos Prácticos y Toma de Decisiones":
 elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
     st.session_state["ver_demostracion"] = None
     st.header("✏️ Módulo 6: Resolvedor Dinámico de Ejercicios de Probabilidad")
-    st.write("Seleccione la **distribución teórica**, configure los **parámetros del modelo** e ingrese el **evento o desigualdad** a evaluar para obtener las métricas y la solución gráfica integrada.")
+    st.write("Seleccione la **distribución teórica**, configure los **parámetros** e ingrese el **evento o desigualdad** a evaluar.")
 
     col_e1, col_e2 = st.columns([1, 1.2])
 
@@ -661,46 +662,46 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
         )
 
         if dist_ejercicio == "Gamma":
-            alpha_ej = st.number_input("Forma α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", help="📌 Significado: Número de etapas acumuladas en el proceso.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_gam_a")
-            beta_ej = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=2.0, step=0.2, format="%g", help="📌 Significado: Escala temporal asignada a cada etapa.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_gam_b")
+            alpha_ej = st.number_input("Forma α:", min_value=1e-9, max_value=None, value=3.0, step=0.5, format="%g", key="m6_gam_a")
+            beta_ej = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=2.0, step=0.2, format="%g", key="m6_gam_b")
             dist_inst = stats.gamma(a=alpha_ej, scale=beta_ej)
             media_ej = alpha_ej * beta_ej
             var_ej = alpha_ej * (beta_ej**2)
             domain_min, domain_max = 0.0, float(dist_inst.ppf(0.999))
 
         elif dist_ejercicio == "Exponencial":
-            lam_ej = st.number_input("Tasa λ:", min_value=1e-9, max_value=None, value=0.2, step=0.01, format="%g", help="📌 Significado: Tasa media de eventos por unidad de tiempo.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_exp_lam")
+            lam_ej = st.number_input("Tasa λ:", min_value=1e-9, max_value=None, value=0.2, step=0.01, format="%g", key="m6_exp_lam")
             dist_inst = stats.expon(scale=1.0/lam_ej)
             media_ej = 1.0 / lam_ej
             var_ej = 1.0 / (lam_ej**2)
             domain_min, domain_max = 0.0, float(dist_inst.ppf(0.999))
 
         elif dist_ejercicio == "Chi-cuadrada":
-            df_ej = st.number_input("Grados de libertad ν:", min_value=1, max_value=None, value=8, step=1, help="📌 Significado: Grados de libertad de la variable Chi-cuadrada.\n\n🔢 Dominio válido: Debe ser un entero mayor o igual a 1.", key="m6_chi_df")
+            df_ej = st.number_input("Grados de libertad ν:", min_value=1, max_value=None, value=8, step=1, key="m6_chi_df")
             dist_inst = stats.chi2(df=df_ej)
             media_ej = float(df_ej)
             var_ej = float(2 * df_ej)
             domain_min, domain_max = 0.0, float(dist_inst.ppf(0.999))
 
         elif dist_ejercicio == "Lognormal":
-            mu_ej = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=2.0, step=0.1, format="%g", help="📌 Significado: Media de la transformación logarítmica ln(X).\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m6_log_mu")
-            sig_ej = st.number_input("Desviación logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Desviación estándar de ln(X).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_log_sig")
+            mu_ej = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=2.0, step=0.1, format="%g", key="m6_log_mu")
+            sig_ej = st.number_input("Desviación logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", key="m6_log_sig")
             dist_inst = stats.lognorm(s=sig_ej, scale=np.exp(mu_ej))
             media_ej = np.exp(mu_ej + (sig_ej**2)/2.0)
             var_ej = np.exp(2*mu_ej + sig_ej**2) * (np.exp(sig_ej**2) - 1.0)
             domain_min, domain_max = 0.0, float(dist_inst.ppf(0.995))
 
         elif dist_ejercicio == "Beta":
-            a_ej = st.number_input("Parámetro α:", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Primer parámetro de forma sobre el intervalo (0, 1).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_bet_a")
-            b_ej = st.number_input("Parámetro β:", min_value=1e-9, max_value=None, value=5.0, step=0.5, format="%g", help="📌 Significado: Segundo parámetro de forma sobre el intervalo (0, 1).\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_bet_b")
+            a_ej = st.number_input("Parámetro α:", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", key="m6_bet_a")
+            b_ej = st.number_input("Parámetro β:", min_value=1e-9, max_value=None, value=5.0, step=0.5, format="%g", key="m6_bet_b")
             dist_inst = stats.beta(a=a_ej, b=b_ej)
             media_ej = a_ej / (a_ej + b_ej)
             var_ej = (a_ej * b_ej) / (((a_ej + b_ej)**2) * (a_ej + b_ej + 1))
             domain_min, domain_max = 0.0, 1.0
 
         elif dist_ejercicio == "Weibull":
-            c_ej = st.number_input("Forma α:", min_value=1e-9, max_value=None, value=2.0, step=0.1, format="%g", help="📌 Significado: Parámetro de forma que define el riesgo acumulado.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_wei_c")
-            sc_ej = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=10.0, step=0.5, format="%g", help="📌 Significado: Vida característica del modelo Weibull.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m6_wei_sc")
+            c_ej = st.number_input("Forma α:", min_value=1e-9, max_value=None, value=2.0, step=0.1, format="%g", key="m6_wei_c")
+            sc_ej = st.number_input("Escala β:", min_value=1e-9, max_value=None, value=10.0, step=0.5, format="%g", key="m6_wei_sc")
             dist_inst = stats.weibull_min(c=c_ej, scale=sc_ej)
             media_ej = float(dist_inst.mean())
             var_ej = float(dist_inst.var())
@@ -715,9 +716,9 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
 
         if tipo_ineq in ["P(X ≤ x)", "P(X < x)", "P(X ≥ x)", "P(X > x)"]:
             if dist_ejercicio == "Beta":
-                x_val = st.number_input("Valor límite x:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.4, step=0.05, format="%g", help="📌 Significado: Punto numérico límite x a evaluar en la desigualdad.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 1.", key="m6_xval")
+                x_val = st.number_input("Valor límite x:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.4, step=0.05, format="%g", key="m6_xval")
             else:
-                x_val = st.number_input("Valor límite x:", min_value=0.0, max_value=None, value=float(np.round(media_ej, 2)), step=0.5, format="%g", help="📌 Significado: Punto numérico límite x a evaluar en la desigualdad.\n\n🔢 Dominio válido: Debe ser mayor o igual a 0.", key="m6_xval")
+                x_val = st.number_input("Valor límite x:", min_value=0.0, max_value=None, value=float(np.round(media_ej, 2)), step=0.5, format="%g", key="m6_xval")
 
             if tipo_ineq in ["P(X ≤ x)", "P(X < x)"]:
                 prob_res = float(dist_inst.cdf(x_val))
@@ -728,14 +729,14 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
 
         else:
             if dist_ejercicio == "Beta":
-                a_val = st.number_input("Límite inferior a:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.2, step=0.05, format="%g", help="📌 Significado: Extremo inferior del intervalo a evaluar.\n\n🔢 Dominio válido: Debe cumplir que a < b y estar entre 0 y 1.", key="m6_aval")
-                b_val = st.number_input("Límite superior b:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.7, step=0.05, format="%g", help="📌 Significado: Extremo superior del intervalo a evaluar.\n\n🔢 Dominio válido: Debe cumplir que a < b y estar entre 0 y 1.", key="m6_bval")
+                a_val = st.number_input("Límite inferior a:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.2, step=0.05, format="%g", key="m6_aval")
+                b_val = st.number_input("Límite superior b:", min_value=1e-7, max_value=1.0 - 1e-7, value=0.7, step=0.05, format="%g", key="m6_bval")
             else:
-                a_val = st.number_input("Límite inferior a:", min_value=0.0, max_value=None, value=float(np.round(media_ej * 0.5, 2)), step=0.5, format="%g", help="📌 Significado: Extremo inferior del intervalo a evaluar.\n\n🔢 Dominio válido: Debe cumplir que a < b.", key="m6_aval")
-                b_val = st.number_input("Límite superior b:", min_value=0.0, max_value=None, value=float(np.round(media_ej * 1.5, 2)), step=0.5, format="%g", help="📌 Significado: Extremo superior del intervalo a evaluar.\n\n🔢 Dominio válido: Debe cumplir que a < b.", key="m6_bval")
+                a_val = st.number_input("Límite inferior a:", min_value=0.0, max_value=None, value=float(np.round(media_ej * 0.5, 2)), step=0.5, format="%g", key="m6_aval")
+                b_val = st.number_input("Límite superior b:", min_value=0.0, max_value=None, value=float(np.round(media_ej * 1.5, 2)), step=0.5, format="%g", key="m6_bval")
 
             if a_val >= b_val:
-                st.warning("⚠️ El límite inferior a debe ser estrictamente menor que el límite superior b.")
+                st.warning("⚠️ El límite inferior a debe ser menor que el superior b.")
                 prob_res = 0.0
                 texto_res = "P(a ≤ X ≤ b) = 0"
             else:
@@ -743,14 +744,13 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
                 texto_res = f"P({a_val:g} ≤ X ≤ {b_val:g}) = {prob_res:g}"
 
         with st.container(border=True):
-            st.markdown("**📋 Resultados Analíticos del Ejercicio:**")
-            st.markdown(f"- **Resultado Evaluado:** `{texto_res}` ({prob_res*100:g}%)")
+            st.markdown("**📋 Resultados Analíticos:**")
+            st.markdown(f"- **Resultado:** `{texto_res}` ({prob_res*100:g}%)")
             st.markdown(f"- **Media E[X]:** `{media_ej:g}`")
             st.markdown(f"- **Varianza V(X):** `{var_ej:g}`")
-            st.markdown(f"- **Desviación Estándar σ:** `{np.sqrt(var_ej):g}`")
 
     with col_e2:
-        st.subheader("3. Representación Gráfica del Evento")
+        st.subheader("3. Representación Gráfica")
         x_plot = np.linspace(domain_min + 0.0001 if domain_min == 0 else domain_min, domain_max, 500)
         y_plot = dist_inst.pdf(x_plot)
 
@@ -778,8 +778,8 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
                 ax_ej.axvline(b_val, color="#059669", linestyle="--", lw=1.8)
 
         ax_ej.axvline(media_ej, color="#DC2626", linestyle=":", lw=1.8, label=f"E[X] = {media_ej:g}")
-        ax_ej.set_title(f"Visualización del Evento de Probabilidad ({dist_ejercicio})", fontweight="bold")
-        ax_ej.set_xlabel("Variable Aleatoria X")
+        ax_ej.set_title(f"Visualización del Evento ({dist_ejercicio})", fontweight="bold")
+        ax_ej.set_xlabel("Variable X")
         ax_ej.set_ylabel("Densidad f(x)")
         ax_ej.grid(True, linestyle=":", alpha=0.6)
         ax_ej.legend(loc="upper right")
@@ -792,7 +792,6 @@ elif modulo == "6. Ejercicios Prácticos y Cálculo de Probabilidades":
 # ==============================================================================
 elif modulo == "7. Fundamentación Teórica y Fórmulas":
     
-    # SI HAY UNA DEMOSTRACIÓN SELECCIONADA, MUESTRA EL VISOR DE PDF DEDICADO
     if st.session_state["ver_demostracion"] is not None:
         dist_dem = st.session_state["ver_demostracion"]
         
@@ -804,7 +803,6 @@ elif modulo == "7. Fundamentación Teórica y Fórmulas":
         st.write("Consulta el desarrollo matemático original del cuaderno cargado en PDF:")
         st.markdown("---")
 
-        # Mapeo exacto a los nombres de tus archivos PDF
         archivos_pdf = {
             "Gamma": "demostracion_gamma_pdf.pdf",
             "Exponencial": "demostracion_exponencial_pdf.pdf",
@@ -818,7 +816,6 @@ elif modulo == "7. Fundamentación Teórica y Fórmulas":
         if nombre_archivo:
             mostrar_pdf(nombre_archivo)
 
-    # VISTA PRINCIPAL ORDENADA: 1. Gamma, 2. Exponencial, 3. Chi-Cuadrada, 4. Log-Normal, 5. Beta, 6. Weibull
     else:
         st.header("📚 Módulo 7: Fundamentación Matemática y Procedimientos Analíticos")
         st.write("Fórmulas, momentos matemáticos y acceso directo a las demostraciones escaneadas en PDF:")
