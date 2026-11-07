@@ -30,6 +30,13 @@ if "ver_demostracion" not in st.session_state:
 
 # Función auxiliar para renderizar archivos PDF locales en Streamlit con botón de descarga
 def mostrar_pdf(ruta_pdf):
+    # Verificación de respaldo en caso de variaciones en la extensión del archivo
+    if not os.path.exists(ruta_pdf):
+        if ruta_pdf.endswith("_pdf.pdf"):
+            alt_ruta = ruta_pdf.replace("_pdf.pdf", ".pdf")
+            if os.path.exists(alt_ruta):
+                ruta_pdf = alt_ruta
+
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
             pdf_bytes = f.read()
@@ -49,7 +56,7 @@ def mostrar_pdf(ruta_pdf):
         pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
     else:
-        st.error(f"⚠️ No se encontró el archivo `{ruta_pdf}` en el servidor.")
+        st.error(f"⚠️ No se encontró el archivo `{ruta_pdf}` en el servidor. Verifica que esté subido a tu repositorio de GitHub.")
 
 # Estilo CSS inyectado: Borde verde al enfocar/escribir en las entradas
 st.markdown("""
@@ -98,6 +105,7 @@ st.sidebar.caption("""
 5. Beta
 6. Weibull
 """)
+
 # ==============================================================================
 # MÓDULO 1: EXPLORADOR DE DISTRIBUCIONES (PDF Y CDF)
 # ==============================================================================
@@ -159,7 +167,7 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
         elif dist_choice == "Lognormal":
             st.latex(r"\ln(X) \sim \mathcal{N}(\mu, \sigma^2)")
             mu_ln = st.number_input("Media logarítmica μ:", min_value=None, max_value=None, value=1.2, step=0.1, format="%g", help="📌 Significado: Promedio de los datos transformados mediante el logaritmo natural ln(X).\n\n🔢 Dominio válido: Puede tomar cualquier valor real (-∞, ∞).", key="m1_ln_mu")
-            sigma_ln = st.number_input("Desv. estándar logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Dispersión o variabilidad de los datos en la escala logarítmica.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_ln_sig")
+            sigma_ln = st.number_input("Desv. estándar logarítmica σ:", min_value=1e-9, max_value=None, value=0.5, step=0.05, format="%g", help="📌 Significado: Dispersión o variabilidad de los datos en la escala logarítmica.\n\n🔢 Dominio válido: Debe ser strictly mayor que 0.", key="m1_ln_sig")
             
             x_max = float(stats.lognorm.ppf(0.995, s=sigma_ln, scale=np.exp(mu_ln)))
             x = np.linspace(0.001, x_max, 500)
@@ -170,7 +178,7 @@ if modulo == "1. Explorador de Distribuciones (PDF / CDF)":
 
         elif dist_choice == "Beta":
             st.latex(r"f(x) = \frac{1}{B(\alpha, \beta)} x^{\alpha-1} (1-x)^{\beta-1}")
-            alpha_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Primer parámetro de forma que controla la densidad cerca del extremo 0.\n\n🔢 Dominio válido: Debe ser strictly mayor que 0.", key="m1_beta_a")
+            alpha_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Primer parámetro de forma que controla la densidad cerca del extremo 0.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_beta_a")
             beta_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=5.0, step=0.5, format="%g", help="📌 Significado: Segundo parámetro de forma que controla la densidad cerca del extremo 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m1_beta_b")
             
             x = np.linspace(0.001, 0.999, 500)
@@ -384,7 +392,7 @@ elif modulo == "3. Análisis de Riesgo y Variabilidad (Beta y Chi²)":
 
         cb1, cb2 = st.columns([1, 1.5])
         with cb1:
-            a_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=4.0, step=0.5, format="%g", help="📌 Significado: Recuento de defectos u observaciones no conformes previas + 1.\n\n🔢 Dominio válido: Debe ser strictly mayor que 0.", key="m3_ba")
+            a_b = st.number_input("Parámetro α (a):", min_value=1e-9, max_value=None, value=4.0, step=0.5, format="%g", help="📌 Significado: Recuento de defectos u observaciones no conformes previas + 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m3_ba")
             b_b = st.number_input("Parámetro β (b):", min_value=1e-9, max_value=None, value=2.0, step=0.5, format="%g", help="📌 Significado: Recuento de unidades totalmente aceptadas o conformes previas + 1.\n\n🔢 Dominio válido: Debe ser estrictamente mayor que 0.", key="m3_bb")
             umbral_riesgo = st.number_input("Umbral de riesgo (xlim):", min_value=1e-7, max_value=1.0 - 1e-7, value=0.90, step=0.01, format="%g", help="📌 Significado: Proporción máxima aceptable de piezas no conformes en el lote.\n\n🔢 Dominio válido: Debe estar estrictamente entre 0 y 1.", key="m3_umb")
 
