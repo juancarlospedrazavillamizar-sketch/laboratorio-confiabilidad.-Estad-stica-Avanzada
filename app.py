@@ -28,23 +28,28 @@ st.set_page_config(
 if "ver_demostracion" not in st.session_state:
     st.session_state["ver_demostracion"] = None
 
-# Función auxiliar para renderizar archivos PDF locales en Streamlit mediante iframe
+# Función auxiliar para renderizar archivos PDF locales en Streamlit con botón de descarga
 def mostrar_pdf(ruta_pdf):
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+            pdf_bytes = f.read()
+            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        # Botón de respaldo para abrir/descargar directamente si el navegador bloquea el iframe
+        st.download_button(
+            label="📥 Descargar / Abrir documento PDF directamente",
+            data=pdf_bytes,
+            file_name=os.path.basename(ruta_pdf),
+            mime="application/pdf",
+            key=f"btn_dl_{ruta_pdf}"
+        )
+        st.caption("ℹ️ Si tu navegador (Microsoft Edge/Chrome) bloquea la vista previa abajo, usa el botón azul de arriba para abrir el archivo.")
+
+        # Intentar renderizar el visor interactivo
         pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
     else:
-        # Intento alternativo por si el archivo no incluye la terminación '_pdf'
-        alt_ruta = ruta_pdf.replace("_pdf.pdf", ".pdf")
-        if os.path.exists(alt_ruta):
-            with open(alt_ruta, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
-        else:
-            st.error(f"⚠️ Ndokuaapái pe archivo `{ruta_pdf}` ni `{alt_ruta}` proyecto carpeta-pe.")
+        st.error(f"⚠️ No se encontró el archivo `{ruta_pdf}` en el servidor.")
 
 # Estilo CSS inyectado: Borde verde al enfocar/escribir en las entradas
 st.markdown("""
